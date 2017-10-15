@@ -24,11 +24,10 @@ except ImportError:
 import sys
 import time
 import threading
-
 import pymongo
 
 from pymongo import CursorType, errors as pymongo_errors
-
+from mongo_connector.fix_by_schema import fix_object
 from mongo_connector import errors, util
 from mongo_connector.constants import DEFAULT_BATCH_SIZE
 from mongo_connector.gridfs_file import GridFSFile
@@ -135,24 +134,24 @@ class OplogThread(threading.Thread):
         """
         # Don't replicate entries resulting from chunk moves
         if entry.get("fromMigrate"):
-            return True, False
+            return True, False, None
 
         # Ignore no-ops
         if entry['op'] == 'n':
-            return True, False
+            return True, False, None
         ns = entry['ns']
 
         if '.' not in ns:
-            return True, False
+            return True, False, None
         coll = ns.split('.', 1)[1]
 
         # Ignore system collections
         if coll.startswith("system."):
-            return True, False
+            return True, False, None
 
         # Ignore GridFS chunks
         if coll.endswith('.chunks'):
-            return True, False
+            return True, False, None
 
         is_gridfs_file = False
         if coll.endswith(".files"):
@@ -160,12 +159,12 @@ class OplogThread(threading.Thread):
             if self.namespace_config.gridfs_namespace(ns):
                 is_gridfs_file = True
             else:
-                return True, False
+                return True, False, None
 
         # Commands should not be ignored, filtered, or renamed. Renaming is
         # handled by the DocManagers via the CommandHelper class.
         if coll == "$cmd":
-            return False, False
+            return False, False, None
 
         # Rename or filter out namespaces that are ignored keeping
         # included gridfs namespaces.
@@ -173,7 +172,7 @@ class OplogThread(threading.Thread):
         if namespace is None:
             LOG.debug("OplogThread: Skipping oplog entry: "
                       "'%s' is not in the namespace configuration." % (ns,))
-            return True, False
+            return True, False, None
 
         # Update the namespace.
         entry['ns'] = namespace.dest_name
@@ -183,8 +182,10 @@ class OplogThread(threading.Thread):
         if not self.filter_oplog_entry(
                 entry, include_fields=namespace.include_fields,
                 exclude_fields=namespace.exclude_fields):
-            return True, False
-        return False, is_gridfs_file
+            return True, False, None
+        # LOG.info("schema:%s", namespace.schema)
+        return False, is_gridfs_file, namespace.schema
+
 
     @log_fatal_exceptions
     def run(self):
@@ -227,7 +228,7 @@ class OplogThread(threading.Thread):
                                   " document number in this cursor is %d"
                                   % n)
 
-                        skip, is_gridfs_file = self._should_skip_entry(entry)
+                        skip, is_gridfs_file, schema = self._should_skip_entry(entry)
                         if skip:
                             # update the last_ts on skipped entries to ensure
                             # our checkpoint does not fall off the oplog. This
@@ -255,6 +256,8 @@ class OplogThread(threading.Thread):
                                     # Retrieve inserted document from
                                     # 'o' field in oplog record
                                     doc = entry.get('o')
+                                    if schema:
+                                        doc = fix_object(doc, schema)
                                     # Extract timestamp and namespace
                                     if is_gridfs_file:
                                         db, coll = ns.split('.', 1)
@@ -269,6 +272,10 @@ class OplogThread(threading.Thread):
 
                                 # Update
                                 elif operation == 'u':
+                                    for op in ["$set", "$setOnInsert"]:
+                                        if schema and entry['o'].get(op):
+                                            entry['o'][op] = fix_object(entry['o'][op], schema)
+
                                     docman.update(entry['o2']['_id'],
                                                   entry['o'],
                                                   ns, timestamp)

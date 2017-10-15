@@ -21,28 +21,30 @@ from itertools import combinations
 from mongo_connector import errors
 from mongo_connector import compat
 
+import jsonschema as jschema
 
 LOG = logging.getLogger(__name__)
 
 
 _Namespace = namedtuple('Namespace', ['dest_name', 'source_name', 'gridfs',
-                                      'include_fields', 'exclude_fields'])
+                                      'include_fields', 'exclude_fields', 'schema'])
 
 
 class Namespace(_Namespace):
     def __new__(cls, dest_name=None, source_name=None, gridfs=False,
-                include_fields=None, exclude_fields=None):
+                include_fields=None, exclude_fields=None, schema=None):
         include_fields = set(include_fields or [])
         exclude_fields = set(exclude_fields or [])
+        LOG.info("### schema: %s", schema)
         return super(Namespace, cls).__new__(
             cls, dest_name, source_name, gridfs, include_fields,
-            exclude_fields)
+            exclude_fields, schema)
 
     def with_options(self, **kwargs):
         new_options = dict(
             dest_name=self.dest_name, source_name=self.source_name,
             gridfs=self.gridfs, include_fields=self.include_fields,
-            exclude_fields=self.exclude_fields)
+            exclude_fields=self.exclude_fields, schema=self.schema)
         new_options.update(kwargs)
         return Namespace(**new_options)
 
@@ -105,7 +107,7 @@ class NamespaceConfig(object):
     """
     def __init__(self, namespace_set=None, ex_namespace_set=None,
                  gridfs_set=None, dest_mapping=None, namespace_options=None,
-                 include_fields=None, exclude_fields=None):
+                 include_fields=None, exclude_fields=None, schema=None):
         # A mapping from non-wildcard source namespaces to a MappedNamespace
         # containing the non-wildcard target name.
         self._plain = {}
@@ -127,6 +129,7 @@ class NamespaceConfig(object):
         # Fields to include or exclude from all namespaces
         self._include_fields = validate_include_fields(include_fields)
         self._exclude_fields = validate_exclude_fields(exclude_fields)
+        LOG.info("### schema: %s", str(schema))
 
         # Add each included namespace. Namespaces have a one-to-one
         # relationship to the target system, meaning multiple source
@@ -138,7 +141,8 @@ class NamespaceConfig(object):
             dest_mapping=dest_mapping,
             namespace_options=namespace_options,
             include_fields=include_fields,
-            exclude_fields=exclude_fields)
+            exclude_fields=exclude_fields,
+            schema=schema)
 
         # The set of, possibly wildcard, namespaces to exclude.
         self._ex_namespace_set = RegexSet.from_namespaces(ex_namespace_set)
@@ -415,6 +419,7 @@ def _merge_namespace_options(namespace_set=None, ex_namespace_set=None,
                 dest_name=options_or_str.get('rename'),
                 include_fields=options_or_str.get('includeFields'),
                 exclude_fields=options_or_str.get('excludeFields'),
+                schema=options_or_str.get("schema"),
                 gridfs=options_or_str.get('gridfs', False))
         elif compat.is_string(options_or_str):
             namespace_set.add(source_name)
@@ -459,7 +464,8 @@ def _merge_namespace_options(namespace_set=None, ex_namespace_set=None,
 def validate_namespace_options(namespace_set=None, ex_namespace_set=None,
                                gridfs_set=None, dest_mapping=None,
                                namespace_options=None,
-                               include_fields=None, exclude_fields=None):
+                               include_fields=None, exclude_fields=None,
+                               schema=None):
     ex_namespace_set, namespaces = _merge_namespace_options(
         namespace_set=namespace_set,
         ex_namespace_set=ex_namespace_set,
@@ -468,6 +474,9 @@ def validate_namespace_options(namespace_set=None, ex_namespace_set=None,
         namespace_options=namespace_options,
         include_fields=include_fields,
         exclude_fields=exclude_fields)
+
+    if schema:
+        jschema.Draft4Validator.check_schema(schema)
 
     for excluded_name in ex_namespace_set:
         _validate_namespace(excluded_name)

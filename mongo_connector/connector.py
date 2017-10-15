@@ -151,7 +151,8 @@ class Connector(threading.Thread):
             dest_mapping=kwargs.get('dest_mapping'),
             namespace_options=kwargs.get('namespace_options'),
             include_fields=kwargs.get('fields'),
-            exclude_fields=kwargs.get('exclude_fields')
+            exclude_fields=kwargs.get('exclude_fields'),
+            schema=kwargs.get("schema"),
         )
 
         # Initialize and set the command helper
@@ -521,6 +522,15 @@ def get_config_options():
         "If specified, this flag will ensure that "
         "mongo_connector won't read the entire contents of a "
         "namespace iff --oplog-ts points to an empty file.")
+    
+    # schema = add_option(
+    #     config_key="schema",
+    #     default=None,
+    #     type=str)
+
+    # schema.add_cli(
+    #     "--schema",  dest="schema", help=
+    #     "schema of the collection.")
 
     batch_size = add_option(
         config_key="batchSize",
@@ -838,10 +848,11 @@ def get_config_options():
         gridfs_set = namespace_options.pop('gridfs', None)
         dest_mapping = namespace_options.pop('mapping', None)
         option.value["namespace_options"] = namespace_options
-
+        schema = namespace_options.pop('schema', None)
+        LOG.error("### schema: %s", schema)
         validate_namespace_options(
             namespace_set=ns_set, ex_namespace_set=ex_ns_set,
-            dest_mapping=dest_mapping,
+            dest_mapping=dest_mapping, schema=schema,
             namespace_options=namespace_options, gridfs_set=gridfs_set)
 
     def apply_old_namespace_options(option, cli_values):
