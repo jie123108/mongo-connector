@@ -1,7 +1,6 @@
 # coding=utf8
 
 import logging
-import jsonschema as jschema
 import json 
 
 
@@ -85,7 +84,7 @@ def fix_to_bool(obj, obj_type):
     elif obj_type == float:
         value = not(obj < 0.000001 and obj > -0.000001)
     elif obj_type == str or obj_type == unicode:
-        value = obj != ""
+        value = obj != "" and obj != None
     elif obj_type == list:
         if len(obj) > 0 and type(obj[0]) == bool:
             value = obj[0]
@@ -158,7 +157,6 @@ def fix_object_internal(obj, schema):
         else:
             logger.error(u"unknow type: %s, obj: %s", exp_type, unicode(obj))
             invalid = True
-
     else: # 如果未指定类型, 不进行修复.
         ok_obj = obj
     return ok_obj, invalid
