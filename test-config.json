@@ -1,0 +1,42 @@
+{
+    "mainAddress": "localhost:27017",
+    "oplogFile": "oplog.timestamp",
+    "noDump": false,
+    "batchSize": -1,
+    "verbosity": 2,
+    "continueOnError": true,
+
+    "logging": {
+        "type": "file",
+        "filename": "mongo-connector-coll01.log"
+    },
+
+    "authentication": {
+        "__adminUsername": "username",
+        "__password": "password",
+        "__passwordFile": "mongo-connector.pwd"
+    },
+
+    "namespaces": {
+        "xxx.yyy": {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "a": {"type": "integer"},
+                    "b": {"type": "string"},
+                    "c": {"type": "string"}
+                }
+            }
+        }
+    },
+
+    "docManagers": [
+        {
+            "docManager": "elastic2_doc_manager",
+            "targetURL": "localhost:9200",
+            "__bulkSize": 1000,
+            "__uniqueKey": "_id",
+            "__autoCommitInterval": null
+        }
+    ]
+}

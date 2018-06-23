@@ -94,17 +94,10 @@ def fix_to_bool(obj, obj_type):
         invalid = True
 
     return value, invalid
-"""
-"filmsex": {"type": "array", "items": {
-            "type": "object", 
-            "properties": {"fid": {"type": "integer"}, "name": {"type": "string"} }
-            }
-        },
- """
+
 def fix_object_internal(obj, schema):
     exp_type = schema.get("type")
     obj_type = type(obj)
-
     ok_obj = None 
     invalid = False
     if exp_type:
@@ -120,6 +113,7 @@ def fix_object_internal(obj, schema):
                     for key, value in obj.iteritems():
                         # get sub item schema
                         value_schema = properties.get(key)
+                        # print(u"key: %s, schema: %s" %(key, value_schema))
                         if value_schema: #if have a schema, fix by schema
                             ok_value, value_invalid = fix_object_internal(value, value_schema)
                             if value_invalid:

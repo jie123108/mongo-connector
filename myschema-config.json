@@ -1,0 +1,43 @@
+{
+    "__comment__": "Configuration options starting with '__' are disabled",
+    "__comment__": "To enable them, remove the preceding '__'",
+
+    "mainAddress": "localhost:27017",
+    "oplogFile": "myschema-oplog.timestamp",
+    "noDump": false,
+    "batchSize": -1,
+    "verbosity": 2,
+    "continueOnError": true,
+
+    "logging": {
+        "type": "file",
+        "filename": "myschema-mongo-connector.log",
+        "format": "%(asctime)s [%(levelname)s] %(name)s:%(lineno)d - %(message)s",
+        "rotationWhen": "D",
+        "rotationInterval": 1,
+        "rotationBackups": 10,
+        "__type": "syslog",
+        "__host": "localhost:514"
+    },
+
+    "authentication": {
+        "__adminUsername": "username",
+        "__password": "password",
+        "__passwordFile": "mongo-connector.pwd"
+    },
+
+    "namespaces": {
+        "test.myschema": {
+            "schema": {"type": "object", "properties": {"files": {"items": {"type": "object", "properties": {"images": {"type": "object", "properties": {"16:9": {"type": "string"}, "3:4": {"type": "string"}}}, "name": {"type": "string"}, "detail": {"type": "object", "properties": {"360p": {"type": "object", "properties": {"url": {"type": "string"}, "filesize": {"type": "integer"}, "fileid": {"type": "string"}}}, "540p": {"type": "object", "properties": {"url": {"type": "string"}, "filesize": {"type": "integer"}, "fileid": {"type": "string"}}}}}}}, "type": "array"}, "alias": {"items": {"type": "string"}, "type": "array"}, "fgname": {"type": "object", "properties": {"CNT": {"type": "integer"}, "FR": {"type": "string"}, "EN": {"type": "string"}, "CN": {"type": "string"}}}, "name": {"type": "string"}, "pubdate": {"type": "integer"}, "douban": {"type": "number"}, "films": {"items": {"type": "integer"}, "type": "array"}, "filmsex": {"items": {"type": "object", "properties": {"name": {"type": "string"}, "fid": {"type": "integer"}}}, "type": "array"}}}
+        }
+    },
+    "docManagers": [
+        {
+            "docManager": "elastic2_doc_manager",
+            "targetURL": "localhost:9200",
+            "__bulkSize": 1000,
+            "__uniqueKey": "_id",
+            "__autoCommitInterval": null
+        }
+    ]
+}

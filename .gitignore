@@ -7,3 +7,5 @@
 # IDE settings folders
 .idea/
 .vscode/
+build
+mongo_connector.egg-info
